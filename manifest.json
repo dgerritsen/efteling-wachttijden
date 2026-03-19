@@ -2,7 +2,7 @@
   "name": "Efteling Wachttijden",
   "short_name": "Efteling",
   "description": "Live wachttijden voor alle Efteling attracties",
-  "start_url": "/index.html",
+  "start_url": "/efteling-wachttijden/index.html",
   "display": "standalone",
   "orientation": "portrait",
   "background_color": "#0c1117",
