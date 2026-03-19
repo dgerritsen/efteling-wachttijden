@@ -1,0 +1,1113 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<title>Efteling Wachttijden — Live</title>
+
+<!-- PWA -->
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#141c28">
+<meta name="application-name" content="Efteling">
+
+<!-- iOS PWA -->
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Efteling">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+
+<!-- Splash screens for iPhone -->
+<meta name="mobile-web-app-capable" content="yes">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Crimson+Pro:ital,wght@0,400;0,600;0,700;1,400&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg-deep: #0c1117;
+    --bg-mid: #141c28;
+    --text: #f1f0eb;
+    --text-dim: rgba(255,255,255,0.4);
+    --text-faint: rgba(255,255,255,0.2);
+    --border: rgba(255,255,255,0.06);
+    --card: rgba(255,255,255,0.04);
+    --gold: #c9b885;
+    --green: #22c55e;
+    --purple: #c4b5fd;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    min-height: 100vh;
+    background: linear-gradient(170deg, var(--bg-deep) 0%, var(--bg-mid) 30%, #191428 60%, #0f1419 100%);
+    color: var(--text);
+    font-family: 'Crimson Pro', Georgia, serif;
+    -webkit-font-smoothing: antialiased;
+    padding-top: env(safe-area-inset-top);
+    padding-left: env(safe-area-inset-left);
+    padding-right: env(safe-area-inset-right);
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+
+  ::-webkit-scrollbar { width: 5px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.08); border-radius: 3px; }
+  input::placeholder { color: rgba(255,255,255,0.22); }
+
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(6px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes twinkle {
+    0%, 100% { opacity: 0.12; }
+    50% { opacity: 0.65; }
+  }
+  @keyframes float {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-6px); }
+  }
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.4; }
+  }
+  @keyframes spin {
+    to { transform: rotate(360deg); }
+  }
+  @keyframes popValue {
+    0% { transform: scale(1); }
+    40% { transform: scale(1.25); }
+    100% { transform: scale(1); }
+  }
+
+  .stars { position: fixed; inset: 0; pointer-events: none; z-index: 0; overflow: hidden; }
+  .star { position: absolute; border-radius: 50%; background: #fff; }
+
+  .container {
+    max-width: 520px; margin: 0 auto; padding: 28px 16px 48px;
+    position: relative; z-index: 1;
+  }
+
+  /* Header */
+  .header { text-align: center; margin-bottom: 24px; animation: fadeIn 0.5s ease; }
+  .header-icon { font-size: 40px; margin-bottom: 2px; animation: float 4s ease-in-out infinite; }
+  .header h1 {
+    font-size: 30px; font-weight: 700; letter-spacing: -0.3px;
+    background: linear-gradient(135deg, var(--text) 0%, var(--gold) 100%);
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  .header-meta {
+    display: flex; align-items: center; justify-content: center;
+    gap: 8px; margin-top: 8px;
+  }
+  .header-time { font-size: 12px; color: var(--text-dim); font-family: 'DM Mono', monospace; }
+  .refresh-btn {
+    background: none; border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 6px; padding: 3px 8px; cursor: pointer;
+    font-size: 12px; color: var(--text-dim); font-family: 'DM Mono', monospace;
+    transition: all 0.2s;
+  }
+  .refresh-btn:hover { border-color: rgba(255,255,255,0.25); color: var(--text); }
+  .refresh-btn.spinning { animation: spin 0.8s linear infinite; }
+  .live-dot {
+    width: 6px; height: 6px; border-radius: 50%; background: var(--green);
+    box-shadow: 0 0 6px var(--green); display: inline-block;
+    animation: pulse 2s ease-in-out infinite;
+  }
+
+  /* Banner */
+  .banner { border-radius: 14px; padding: 18px 20px; margin-bottom: 22px; text-align: center; animation: fadeIn 0.4s ease; }
+  .banner-closed { background: rgba(99,90,140,0.15); border: 1px solid rgba(139,130,180,0.2); }
+  .banner-closed .banner-title { color: var(--purple); }
+  .banner-error { background: rgba(239,68,68,0.1); border: 1px solid rgba(239,68,68,0.2); }
+  .banner-error .banner-title { color: #fca5a5; }
+  .banner-icon { font-size: 28px; margin-bottom: 6px; }
+  .banner-title { font-size: 17px; font-weight: 600; margin-bottom: 4px; }
+  .banner-sub { font-size: 13px; color: var(--text-dim); line-height: 1.5; }
+
+  /* Loading */
+  .loading { text-align: center; padding: 60px 0; animation: pulse 1.5s ease infinite; }
+  .loading-icon { font-size: 40px; margin-bottom: 12px; }
+  .loading-text { color: var(--text-dim); font-size: 15px; }
+
+  /* Stats */
+  .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 22px; }
+  .stat-card { background: var(--card); border: 1px solid var(--border); border-radius: 14px; padding: 13px 10px; text-align: center; }
+  .stat-icon { font-size: 18px; margin-bottom: 3px; }
+  .stat-val {
+    font-family: 'DM Mono', monospace; font-size: 19px; font-weight: 700; color: var(--text);
+    transition: transform 0.3s ease;
+  }
+  .stat-val.pop { animation: popValue 0.4s ease; }
+  .stat-label { font-size: 10px; color: var(--text-faint); text-transform: uppercase; letter-spacing: 0.5px; margin-top: 2px; }
+  .stat-sub { font-size: 11px; color: rgba(255,255,255,0.3); margin-top: 4px; font-style: italic; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; transition: opacity 0.3s; }
+
+  /* Search */
+  .search {
+    width: 100%; padding: 10px 14px; margin-bottom: 12px;
+    background: var(--card); border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 12px; color: var(--text);
+    font-family: 'Crimson Pro', serif; font-size: 14px; outline: none;
+    transition: border-color 0.2s;
+  }
+  .search:focus { border-color: rgba(255,255,255,0.18); }
+
+  /* Filter tabs */
+  .tabs { display: flex; gap: 6px; margin-bottom: 20px; overflow-x: auto; padding-bottom: 2px; }
+  .tab {
+    background: rgba(255,255,255,0.03); border: 1px solid var(--border);
+    border-radius: 10px; padding: 7px 13px; cursor: pointer; white-space: nowrap;
+    font-family: 'Crimson Pro', serif; font-size: 13px; font-weight: 500;
+    color: var(--text-dim); transition: all 0.2s;
+  }
+  .tab:hover { border-color: rgba(255,255,255,0.12); }
+  .tab.active { background: rgba(255,255,255,0.12); border-color: rgba(255,255,255,0.15); color: var(--text); }
+  .tab-count { margin-left: 5px; font-size: 11px; opacity: 0.55; }
+
+  /* View toggle */
+  .view-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
+  .view-toggle { display: flex; gap: 0; border: 1px solid var(--border); border-radius: 9px; overflow: hidden; }
+  .view-btn {
+    background: transparent; border: none; cursor: pointer;
+    padding: 6px 12px; font-family: 'DM Mono', monospace; font-size: 12px;
+    color: var(--text-dim); transition: all 0.2s; white-space: nowrap;
+  }
+  .view-btn:not(:last-child) { border-right: 1px solid var(--border); }
+  .view-btn.active { background: rgba(255,255,255,0.1); color: var(--text); }
+  .view-btn:hover:not(.active) { background: rgba(255,255,255,0.04); }
+  .view-label { font-size: 12px; color: var(--text-faint); font-family: 'DM Mono', monospace; }
+
+  /* Land section */
+  .land { margin-bottom: 24px; }
+  .land-header {
+    display: flex; align-items: center; gap: 10px; width: 100%;
+    background: none; border: none; cursor: pointer;
+    padding-bottom: 8px; border-bottom: 1px solid var(--border); margin-bottom: 10px;
+  }
+  .land-arrow { font-size: 11px; color: rgba(255,255,255,0.3); transition: transform 0.2s; display: inline-block; }
+  .land-arrow.open { transform: rotate(90deg); }
+  .land-name { font-family: 'Crimson Pro', serif; font-size: 17px; font-weight: 700; color: rgba(255,255,255,0.65); }
+  .land-count { font-size: 11px; color: rgba(255,255,255,0.25); background: var(--card); padding: 2px 7px; border-radius: 7px; margin-left: auto; transition: opacity 0.3s; }
+  .land-rides { display: flex; flex-direction: column; gap: 7px; position: relative; }
+
+  /* Ride card — all visual properties transition smoothly */
+  .ride {
+    border-radius: 14px; padding: 13px 15px;
+    display: flex; align-items: center; gap: 13px;
+    border: 1px solid transparent;
+    transition: background 0.5s ease, border-color 0.5s ease, opacity 0.5s ease, transform 0.45s cubic-bezier(0.25, 0.8, 0.25, 1);
+    will-change: transform;
+  }
+  .ride.closed { opacity: 0.45; }
+  .ride.entering {
+    animation: fadeIn 0.4s ease both;
+  }
+  .ride.exiting {
+    animation: fadeOut 0.3s ease both;
+    pointer-events: none;
+  }
+  @keyframes fadeOut {
+    to { opacity: 0; transform: translateY(-8px) scale(0.97); }
+  }
+
+  /* Status change effects */
+  .ride.just-opened {
+    animation: pulseOpen 2.5s ease both;
+    opacity: 1 !important;
+    border-left: 3px solid var(--green) !important;
+  }
+  .ride.just-closed {
+    animation: pulseClosed 2.5s ease both;
+    opacity: 0.85 !important;
+    border-left: 3px solid #ef4444 !important;
+  }
+  @keyframes pulseOpen {
+    0%   { box-shadow: 0 0 0 0 rgba(34,197,94,0); }
+    8%   { box-shadow: 0 0 20px 4px rgba(34,197,94,0.35); }
+    30%  { box-shadow: 0 0 12px 2px rgba(34,197,94,0.18); }
+    100% { box-shadow: 0 0 0 0 rgba(34,197,94,0); }
+  }
+  @keyframes pulseClosed {
+    0%   { box-shadow: 0 0 0 0 rgba(239,68,68,0); }
+    8%   { box-shadow: 0 0 20px 4px rgba(239,68,68,0.3); }
+    30%  { box-shadow: 0 0 12px 2px rgba(239,68,68,0.15); }
+    100% { box-shadow: 0 0 0 0 rgba(239,68,68,0); }
+  }
+
+  /* Transition badge — prominent pill next to ride name */
+  .status-badge {
+    display: inline-flex; align-items: center; gap: 4px;
+    font-family: 'DM Mono', monospace; font-size: 10px; font-weight: 500;
+    letter-spacing: 0.3px; text-transform: uppercase;
+    padding: 2px 8px; border-radius: 6px;
+    margin-left: 8px; white-space: nowrap; flex-shrink: 0;
+    animation: badgeIn 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+    transition: opacity 0.8s ease;
+  }
+  .status-badge.fading { opacity: 0; transform: scale(0.9); }
+  .status-badge.opened {
+    background: rgba(34,197,94,0.2);
+    color: #6ee7a0;
+    border: 1px solid rgba(34,197,94,0.35);
+  }
+  .status-badge.opened::before { content: "● "; font-size: 7px; }
+  .status-badge.closed-badge {
+    background: rgba(239,68,68,0.15);
+    color: #fca5a5;
+    border: 1px solid rgba(239,68,68,0.25);
+  }
+  .status-badge.closed-badge::before { content: "● "; font-size: 7px; }
+  @keyframes badgeIn {
+    from { opacity: 0; transform: scale(0.7) translateX(-6px); }
+    to { opacity: 1; transform: scale(1) translateX(0); }
+  }
+
+  /* Override: don't immediately dim a just-closed card */
+  .ride.just-closed.closed {
+    opacity: 0.85 !important;
+    transition: opacity 0.5s ease 2.5s; /* delay the dim until glow finishes */
+  }
+
+  .ride-icon {
+    font-size: 24px; width: 42px; height: 42px;
+    display: flex; align-items: center; justify-content: center;
+    background: rgba(255,255,255,0.05); border-radius: 10px; flex-shrink: 0;
+  }
+  .ride-info { flex: 1; min-width: 0; }
+  .ride-header { display: flex; align-items: center; gap: 7px; margin-bottom: 5px; }
+  .ride-dot {
+    width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0;
+    transition: background 0.5s ease, box-shadow 0.5s ease;
+  }
+  .ride-name {
+    font-size: 14.5px; font-weight: 600; color: var(--text);
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  .ride-bar { height: 4px; border-radius: 2px; background: rgba(255,255,255,0.06); overflow: hidden; }
+  .ride-bar-fill {
+    height: 100%; border-radius: 2px;
+    transition: width 0.8s cubic-bezier(0.25, 0.8, 0.25, 1), background 0.5s ease;
+  }
+  .ride-wait { text-align: right; flex-shrink: 0; min-width: 48px; }
+  .ride-wait-num {
+    font-family: 'DM Mono', monospace; font-size: 21px; font-weight: 700; line-height: 1;
+    transition: color 0.5s ease;
+  }
+  .ride-wait-num.pop { animation: popValue 0.4s ease; }
+  .ride-wait-unit { font-size: 9.5px; color: var(--text-faint); letter-spacing: 0.5px; text-transform: uppercase; margin-top: 2px; }
+  .ride-wait-closed { font-size: 11px; color: rgba(255,255,255,0.3); font-style: italic; }
+
+  .empty { text-align: center; padding: 36px 0; color: var(--text-faint); font-size: 14px; }
+
+  .footer {
+    text-align: center; margin-top: 28px; padding-top: 18px;
+    border-top: 1px solid var(--border);
+    color: var(--text-faint); font-size: 11px;
+    font-family: 'DM Mono', monospace; line-height: 1.6;
+  }
+
+  /* Countdown circle */
+  .countdown {
+    position: fixed; top: calc(14px + env(safe-area-inset-top)); right: calc(14px + env(safe-area-inset-right)); z-index: 100;
+    width: 44px; height: 44px;
+    cursor: pointer;
+    transition: transform 0.2s ease, opacity 0.3s ease;
+    opacity: 0;
+  }
+  .countdown.visible { opacity: 1; }
+  .countdown:hover { transform: scale(1.1); }
+  .countdown:active { transform: scale(0.95); }
+  .countdown svg { width: 100%; height: 100%; transform: rotate(-90deg); }
+  .countdown-track {
+    fill: rgba(12, 17, 23, 0.75);
+    stroke: rgba(255,255,255,0.07);
+    stroke-width: 3;
+  }
+  .countdown-progress {
+    fill: none;
+    stroke: var(--gold);
+    stroke-width: 3;
+    stroke-linecap: round;
+    transition: stroke-dashoffset 0.9s linear, stroke 0.4s ease;
+  }
+  .countdown-progress.refreshing { stroke: var(--green); }
+  .countdown-text {
+    position: absolute; inset: 0;
+    display: flex; align-items: center; justify-content: center;
+    font-family: 'DM Mono', monospace; font-size: 13px; font-weight: 500;
+    color: var(--text-dim);
+    pointer-events: none;
+    transition: color 0.3s;
+  }
+  .countdown.refreshing .countdown-text { color: var(--green); }
+</style>
+</head>
+<body>
+
+<div class="stars" id="stars"></div>
+
+<!-- Countdown circle -->
+<div class="countdown" id="countdown" onclick="manualRefresh()" title="Klik om te vernieuwen">
+  <svg viewBox="0 0 44 44">
+    <circle class="countdown-track" cx="22" cy="22" r="19" />
+    <circle class="countdown-progress" id="countdown-progress" cx="22" cy="22" r="19"
+      stroke-dasharray="119.38" stroke-dashoffset="0" />
+  </svg>
+  <div class="countdown-text" id="countdown-text">60</div>
+</div>
+
+<div class="container">
+  <div class="header">
+    <div class="header-icon">🏰</div>
+    <h1>Efteling Wachttijden</h1>
+    <div class="header-meta" id="header-meta" style="display:none">
+      <span class="live-dot"></span>
+      <span class="header-time" id="update-time"></span>
+      <button class="refresh-btn" id="refresh-btn" onclick="manualRefresh()">↻</button>
+    </div>
+  </div>
+  <div id="content">
+    <div class="loading"><div class="loading-icon">✨</div><div class="loading-text">Wachttijden laden...</div></div>
+  </div>
+</div>
+
+<script>
+// ─── Config ───
+const API_RAW = "https://queue-times.com/parks/160/queue_times.json";
+const PROXIES = [
+  u => `https://corsproxy.io/?${encodeURIComponent(u)}`,
+  u => `https://api.allorigins.win/raw?url=${encodeURIComponent(u)}`,
+  u => `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(u)}`,
+];
+const ICONS = {
+  "baron 1898":"⛏️","python":"🐍","joris en de draak":"🐉",
+  "vliegende hollander":"⚓","symbolica":"🏰","fata morgana":"🌙",
+  "vogel rok":"🦅","droomvlucht":"✨","max & moritz":"🎢",
+  "danse macabre":"💀","piraña":"🌊","carnaval festival":"🎪",
+  "museum":"🖼️","fairytale":"🌳","halve maen":"🚢",
+  "kinderspoor":"🚂","fabula":"📖","sirocco":"🌀",
+  "pagode":"🏯","stoomtrein":"🚂","villa volta":"🌀",
+  "gondoletta":"🚣","kleuterhof":"🧸","stoomcarrousel":"🎠",
+  "diorama":"🔭","monorail":"🚝","nest":"🪺",
+  "tufferbaan":"🚗","archipel":"🏝️","six swans":"🦢",
+  "volkvanlaaf":"🧝","kindervreugd":"🎈","vermolenmolen":"🎡",
+  "badhuys":"🏊","anton pieck":"🎭",
+};
+
+// ─── State ───
+let currentData = null;
+let activeFilter = "all";
+let searchQuery = "";
+let viewMode = "lands";
+let collapsedLands = {};
+let isFirstRender = true;
+let prevRideStates = {}; // { rideId: { is_open: bool } }
+
+// ─── Helpers ───
+function getIcon(name) {
+  const lower = name.toLowerCase();
+  for (const [k, v] of Object.entries(ICONS)) { if (lower.includes(k)) return v; }
+  return "🎠";
+}
+
+function waitStyle(min, open) {
+  if (!open) return { bg:"rgba(55,55,70,0.25)", text:"#6b7280", bar:"#4b5563" };
+  if (min === 0) return { bg:"rgba(34,80,50,0.35)", text:"#6ee7a0", bar:"#22c55e" };
+  if (min <= 15) return { bg:"rgba(34,80,50,0.3)", text:"#86efac", bar:"#4ade80" };
+  if (min <= 30) return { bg:"rgba(120,90,20,0.3)", text:"#fde68a", bar:"#facc15" };
+  if (min <= 60) return { bg:"rgba(140,70,20,0.3)", text:"#fdba74", bar:"#f97316" };
+  return { bg:"rgba(120,30,30,0.3)", text:"#fca5a5", bar:"#ef4444" };
+}
+
+function mainRides(data) {
+  return data.lands.flatMap(l => l.rides).filter(r => !r.name.toLowerCase().includes("single-rider"));
+}
+
+function filterRides(rides) {
+  let f = rides.filter(r => !r.name.toLowerCase().includes("single-rider"));
+  if (activeFilter === "short") f = f.filter(r => r.is_open && r.wait_time <= 15);
+  else if (activeFilter === "open") f = f.filter(r => r.is_open);
+  else if (activeFilter === "closed") f = f.filter(r => !r.is_open);
+  if (searchQuery.trim()) {
+    const q = searchQuery.toLowerCase();
+    f = f.filter(r => r.name.toLowerCase().includes(q));
+  }
+  f.sort((a, b) => {
+    if (a.is_open !== b.is_open) return a.is_open ? -1 : 1;
+    if (a.is_open && b.is_open) return (b.wait_time||0) - (a.wait_time||0);
+    return a.name.localeCompare(b.name);
+  });
+  return f;
+}
+
+function rideDataMap(data) {
+  const map = {};
+  for (const land of data.lands) {
+    for (const r of land.rides) { map[r.id] = r; }
+  }
+  return map;
+}
+
+function savePrevStates() {
+  if (!currentData) return;
+  prevRideStates = {};
+  for (const land of currentData.lands) {
+    for (const r of land.rides) {
+      prevRideStates[r.id] = { is_open: r.is_open };
+    }
+  }
+}
+
+// ─── Stars ───
+(function() {
+  const el = document.getElementById("stars");
+  let html = "";
+  for (let i = 0; i < 35; i++) {
+    html += `<div class="star" style="left:${(i*37+13)%100}%;top:${(i*23+7)%55}%;width:${(i%3)+1}px;height:${(i%3)+1}px;animation:twinkle ${3+(i%4)}s ease-in-out ${(i%5)*0.8}s infinite"></div>`;
+  }
+  el.innerHTML = html;
+})();
+
+// ─── Fetch ───
+async function fetchData() {
+  let lastErr;
+  // Try direct API first
+  try {
+    const res = await fetch(API_RAW, { signal: AbortSignal.timeout(8000) });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const json = await res.json();
+    if (json.lands) return json;
+    throw new Error("Invalid");
+  } catch (e) { lastErr = e; }
+  // Fall back to CORS proxies
+  for (const proxy of PROXIES) {
+    try {
+      const res = await fetch(proxy(API_RAW), { signal: AbortSignal.timeout(8000) });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const json = await res.json();
+      if (json.lands) return json;
+      throw new Error("Invalid");
+    } catch (e) { lastErr = e; }
+  }
+  throw lastErr || new Error("Alle bronnen gefaald");
+}
+
+// ─── Build ride card HTML ───
+function rideCardHTML(ride, entering) {
+  const s = waitStyle(ride.wait_time, ride.is_open);
+  const icon = getIcon(ride.name);
+  const barW = ride.is_open ? Math.min((ride.wait_time / 90) * 100, 100) : 0;
+  const cls = ride.is_open ? "" : " closed";
+  const enterCls = entering ? " entering" : "";
+
+  const waitContent = ride.is_open
+    ? `<div class="ride-wait-num" data-wait-num style="color:${s.text}">${ride.wait_time}</div>
+       <div class="ride-wait-unit">min</div>`
+    : `<div class="ride-wait-closed">Gesloten</div>`;
+  const barHTML = ride.is_open
+    ? `<div class="ride-bar"><div class="ride-bar-fill" data-bar style="width:${barW}%;background:linear-gradient(90deg,${s.bar},${s.bar}bb)"></div></div>`
+    : "";
+
+  return `<div class="ride${cls}${enterCls}" data-ride-id="${ride.id}" data-is-open="${ride.is_open}" style="background:${s.bg};border-color:${s.bar}22">
+    <div class="ride-icon">${icon}</div>
+    <div class="ride-info">
+      <div class="ride-header">
+        <span class="ride-dot" data-dot style="background:${s.bar};${ride.is_open ? `box-shadow:0 0 6px ${s.bar}88` : "box-shadow:none"}"></span>
+        <span class="ride-name">${ride.name}</span>
+      </div>
+      ${barHTML}
+    </div>
+    <div class="ride-wait">${waitContent}</div>
+  </div>`;
+}
+
+// ─── Update a single ride card in-place (no DOM rebuild) ───
+function updateRideCard(el, ride, statusChange) {
+  const s = waitStyle(ride.wait_time, ride.is_open);
+  const barW = ride.is_open ? Math.min((ride.wait_time / 90) * 100, 100) : 0;
+
+  // ─── Status change: open↔closed ───
+  if (statusChange === "opened" || statusChange === "closed") {
+
+    // Update state attribute
+    el.dataset.isOpen = String(ride.is_open);
+
+    // Update background & border
+    el.style.background = s.bg;
+    el.style.borderColor = s.bar + "22";
+
+    // Update open/closed class
+    el.classList.toggle("closed", !ride.is_open);
+
+    // Update dot
+    const dot = el.querySelector("[data-dot]");
+    if (dot) {
+      dot.style.background = s.bar;
+      dot.style.boxShadow = ride.is_open ? `0 0 6px ${s.bar}88` : "none";
+    }
+
+    const info = el.querySelector(".ride-info");
+    const waitEl = el.querySelector(".ride-wait");
+
+    if (statusChange === "opened") {
+      // ── Ride just opened ──
+
+      // Add progress bar
+      const existingBar = info.querySelector(".ride-bar");
+      if (!existingBar) {
+        const barDiv = document.createElement("div");
+        barDiv.className = "ride-bar";
+        barDiv.innerHTML = `<div class="ride-bar-fill" data-bar style="width:0%;background:linear-gradient(90deg,${s.bar},${s.bar}bb)"></div>`;
+        info.appendChild(barDiv);
+        requestAnimationFrame(() => {
+          const fill = barDiv.querySelector("[data-bar]");
+          if (fill) fill.style.width = barW + "%";
+        });
+      } else {
+        const fill = existingBar.querySelector("[data-bar]");
+        if (fill) { fill.style.width = barW + "%"; fill.style.background = `linear-gradient(90deg,${s.bar},${s.bar}bb)`; }
+      }
+
+      // Replace wait display with number
+      waitEl.innerHTML = `<div class="ride-wait-num pop" data-wait-num style="color:${s.text}">${ride.wait_time}</div>
+        <div class="ride-wait-unit">min</div>`;
+
+      // Apply glow
+      el.classList.remove("just-closed");
+      void el.offsetWidth;
+      el.classList.add("just-opened");
+
+    } else {
+      // ── Ride just closed ──
+
+      // Fade out progress bar
+      const existingBar = info.querySelector(".ride-bar");
+      if (existingBar) {
+        const fill = existingBar.querySelector("[data-bar]");
+        if (fill) fill.style.width = "0%";
+        setTimeout(() => existingBar.remove(), 500);
+      }
+
+      // Replace wait display with "Gesloten"
+      waitEl.innerHTML = `<div class="ride-wait-closed" style="color:#fca5a5;font-style:normal;font-weight:500">Gesloten</div>`;
+      // Fade the "Gesloten" label to its resting style after the highlight
+      setTimeout(() => {
+        const label = waitEl.querySelector(".ride-wait-closed");
+        if (label) { label.style.color = ""; label.style.fontWeight = ""; label.style.fontStyle = ""; }
+      }, 3000);
+
+      // Apply glow
+      el.classList.remove("just-opened");
+      void el.offsetWidth;
+      el.classList.add("just-closed");
+    }
+
+    // Add status badge
+    const header = el.querySelector(".ride-header");
+    const oldBadge = header.querySelector(".status-badge");
+    if (oldBadge) oldBadge.remove();
+
+    const badge = document.createElement("span");
+    badge.className = statusChange === "opened"
+      ? "status-badge opened"
+      : "status-badge closed-badge";
+    badge.textContent = statusChange === "opened" ? "Nu open" : "Dicht";
+    header.appendChild(badge);
+
+    // Auto-fade badge after 10s, remove after 11.5s
+    setTimeout(() => badge.classList.add("fading"), 10000);
+    setTimeout(() => badge.remove(), 11500);
+    // Remove glow class + left border after animation, let normal opacity take over
+    setTimeout(() => {
+      el.classList.remove("just-opened", "just-closed");
+      el.style.borderLeft = "";
+    }, 3000);
+
+    return; // skip normal update path
+  }
+
+  // ─── Normal update (no status change) ───
+
+  // Update state attribute
+  el.dataset.isOpen = String(ride.is_open);
+
+  // Background & border color
+  el.style.background = s.bg;
+  el.style.borderColor = s.bar + "22";
+  el.classList.toggle("closed", !ride.is_open);
+
+  // Dot
+  const dot = el.querySelector("[data-dot]");
+  if (dot) {
+    dot.style.background = s.bar;
+    dot.style.boxShadow = ride.is_open ? `0 0 6px ${s.bar}88` : "none";
+  }
+
+  // Bar fill
+  const bar = el.querySelector("[data-bar]");
+  if (bar) {
+    bar.style.width = barW + "%";
+    bar.style.background = `linear-gradient(90deg, ${s.bar}, ${s.bar}bb)`;
+  } else if (ride.is_open) {
+    const info = el.querySelector(".ride-info");
+    if (info && !info.querySelector(".ride-bar")) {
+      const barDiv = document.createElement("div");
+      barDiv.className = "ride-bar";
+      barDiv.innerHTML = `<div class="ride-bar-fill" data-bar style="width:0%;background:linear-gradient(90deg,${s.bar},${s.bar}bb)"></div>`;
+      info.appendChild(barDiv);
+      requestAnimationFrame(() => {
+        barDiv.querySelector("[data-bar]").style.width = barW + "%";
+      });
+    }
+  }
+
+  // Wait number
+  const numEl = el.querySelector("[data-wait-num]");
+  if (numEl && ride.is_open) {
+    const oldVal = parseInt(numEl.textContent);
+    if (oldVal !== ride.wait_time) {
+      numEl.textContent = ride.wait_time;
+      numEl.style.color = s.text;
+      numEl.classList.remove("pop");
+      void numEl.offsetWidth;
+      numEl.classList.add("pop");
+    }
+  }
+}
+
+// ─── FLIP Animation: smoothly reorder children of a container ───
+function flipReorder(container, newOrder) {
+  // newOrder: array of ride IDs in desired order
+  const children = Array.from(container.querySelectorAll("[data-ride-id]"));
+  const childMap = {};
+  children.forEach(c => { childMap[c.dataset.rideId] = c; });
+
+  // FIRST: record current positions
+  const firstRects = {};
+  children.forEach(c => {
+    firstRects[c.dataset.rideId] = c.getBoundingClientRect();
+  });
+
+  // Determine which IDs are new vs existing vs removed
+  const existingIds = new Set(children.map(c => c.dataset.rideId));
+  const newIds = new Set(newOrder.map(String));
+  const removedIds = [...existingIds].filter(id => !newIds.has(id));
+  const addedIds = newOrder.filter(id => !existingIds.has(String(id)));
+
+  // Remove cards that are no longer visible (animate out)
+  for (const id of removedIds) {
+    const el = childMap[id];
+    if (el) {
+      el.classList.add("exiting");
+      el.addEventListener("animationend", () => el.remove(), { once: true });
+    }
+  }
+
+  // Reorder existing + add new (append in order)
+  for (const id of newOrder) {
+    const el = childMap[String(id)];
+    if (el) {
+      container.appendChild(el); // move to end (new order)
+    }
+    // new cards will be added after FLIP plays
+  }
+
+  // LAST: record new positions
+  const lastRects = {};
+  children.forEach(c => {
+    if (!c.classList.contains("exiting")) {
+      lastRects[c.dataset.rideId] = c.getBoundingClientRect();
+    }
+  });
+
+  // INVERT + PLAY: animate from old position to new
+  for (const c of children) {
+    const id = c.dataset.rideId;
+    if (c.classList.contains("exiting")) continue;
+    const first = firstRects[id];
+    const last = lastRects[id];
+    if (!first || !last) continue;
+    const dx = first.left - last.left;
+    const dy = first.top - last.top;
+    if (Math.abs(dx) < 1 && Math.abs(dy) < 1) continue;
+
+    c.style.transform = `translate(${dx}px, ${dy}px)`;
+    c.style.transition = "none";
+    requestAnimationFrame(() => {
+      c.style.transition = "transform 0.45s cubic-bezier(0.25, 0.8, 0.25, 1)";
+      c.style.transform = "";
+    });
+  }
+
+  return addedIds;
+}
+
+// ─── Stats update (in-place with pop animation) ───
+function updateStats(data) {
+  const all = mainRides(data);
+  const open = all.filter(r => r.is_open);
+  const waits = open.map(r => r.wait_time).filter(w => w > 0);
+  const avg = waits.length ? Math.round(waits.reduce((a,b) => a+b, 0) / waits.length) : 0;
+  const max = waits.length ? Math.max(...waits) : 0;
+  const longest = data.lands.flatMap(l=>l.rides).find(r => r.wait_time === max);
+
+  const vals = [
+    `${open.length}/${all.length}`,
+    `${avg} min`,
+    `${max} min`,
+  ];
+  document.querySelectorAll("[data-stat-val]").forEach((el, i) => {
+    if (el.textContent !== vals[i]) {
+      el.textContent = vals[i];
+      el.classList.remove("pop");
+      void el.offsetWidth;
+      el.classList.add("pop");
+    }
+  });
+  const subEl = document.querySelector("[data-stat-sub]");
+  if (subEl) { subEl.textContent = longest ? longest.name : "—"; }
+
+  // Tab counts
+  const counts = {
+    all: all.length,
+    short: all.filter(r => r.is_open && r.wait_time <= 15).length,
+    open: open.length,
+    closed: all.filter(r => !r.is_open).length,
+  };
+  document.querySelectorAll("[data-tab-count]").forEach(el => {
+    const key = el.dataset.tabCount;
+    if (counts[key] != null) el.textContent = `(${counts[key]})`;
+  });
+
+  // Land counts
+  for (const land of data.lands) {
+    const el = document.querySelector(`[data-land-count="${land.id}"]`);
+    if (el) {
+      const rides = land.rides.filter(r => !r.name.toLowerCase().includes("single-rider"));
+      const openCount = rides.filter(r => r.is_open).length;
+      el.textContent = `${openCount}/${rides.length}`;
+    }
+  }
+}
+
+// ─── Smooth data update (called on refresh, NOT on filter/search/view change) ───
+function smoothUpdate() {
+  if (!currentData) return;
+  const rideMap = rideDataMap(currentData);
+
+  // Compute status changes
+  const statusChanges = {}; // { rideId: "opened" | "closed" | null }
+  for (const [id, ride] of Object.entries(rideMap)) {
+    const prev = prevRideStates[id];
+    if (prev != null) {
+      if (!prev.is_open && ride.is_open) statusChanges[id] = "opened";
+      else if (prev.is_open && !ride.is_open) statusChanges[id] = "closed";
+    }
+  }
+
+  // Save new state
+  savePrevStates();
+
+  // Update stats
+  updateStats(currentData);
+
+  // Update park-closed banner visibility
+  const allOpen = mainRides(currentData).some(r => r.is_open);
+  const closedBanner = document.querySelector(".banner-closed");
+  const statsEl = document.querySelector(".stats");
+  if (allOpen) {
+    if (closedBanner) closedBanner.style.display = "none";
+    if (statsEl) statsEl.style.display = "";
+  } else {
+    if (closedBanner) closedBanner.style.display = "";
+    if (statsEl) statsEl.style.display = "none";
+  }
+
+  // For each ride list container, update cards in place + FLIP reorder
+  document.querySelectorAll("[data-rides-container]").forEach(container => {
+    const landId = container.dataset.ridesContainer;
+
+    // Determine which rides belong here
+    let rides;
+    if (landId === "flat") {
+      rides = filterRides(currentData.lands.flatMap(l => l.rides));
+    } else {
+      const land = currentData.lands.find(l => String(l.id) === landId);
+      rides = land ? filterRides(land.rides) : [];
+    }
+
+    // Update existing cards (with status change info)
+    container.querySelectorAll("[data-ride-id]").forEach(el => {
+      const ride = rideMap[el.dataset.rideId];
+      if (ride) updateRideCard(el, ride, statusChanges[el.dataset.rideId] || null);
+    });
+
+    // FLIP reorder
+    const newOrder = rides.map(r => r.id);
+    const addedIds = flipReorder(container, newOrder);
+
+    // Insert newly appeared cards
+    for (const id of addedIds) {
+      const ride = rideMap[id];
+      if (!ride) continue;
+      const temp = document.createElement("div");
+      temp.innerHTML = rideCardHTML(ride, true);
+      const card = temp.firstElementChild;
+      // Insert at correct position
+      const idx = newOrder.indexOf(id);
+      const allCards = container.querySelectorAll("[data-ride-id]:not(.exiting)");
+      if (idx < allCards.length) {
+        container.insertBefore(card, allCards[idx]);
+      } else {
+        container.appendChild(card);
+      }
+    }
+  });
+}
+
+// ─── Full render (initial, filter/search/view change) ───
+function render() {
+  if (!currentData) return;
+  const content = document.getElementById("content");
+  const all = mainRides(currentData);
+  const open = all.filter(r => r.is_open);
+  const parkClosed = open.length === 0;
+
+  const counts = {
+    all: all.length,
+    short: all.filter(r => r.is_open && r.wait_time <= 15).length,
+    open: open.length,
+    closed: all.filter(r => !r.is_open).length,
+  };
+
+  let html = "";
+
+  // Park closed banner
+  if (parkClosed) {
+    html += `<div class="banner banner-closed">
+      <div class="banner-icon">🌙</div>
+      <div class="banner-title">Het park is gesloten</div>
+      <div class="banner-sub">Alle attracties zijn momenteel dicht.<br>Hieronder zie je het overzicht per themagebied.</div>
+    </div>`;
+  }
+
+  // Stats (hidden when park closed via display:none)
+  const waits = open.map(r => r.wait_time).filter(w => w > 0);
+  const avg = waits.length ? Math.round(waits.reduce((a,b) => a+b, 0) / waits.length) : 0;
+  const max = waits.length ? Math.max(...waits) : 0;
+  const longest = currentData.lands.flatMap(l=>l.rides).find(r => r.wait_time === max);
+  html += `<div class="stats" style="${parkClosed ? "display:none" : ""}">
+    <div class="stat-card"><div class="stat-icon">🟢</div><div class="stat-val" data-stat-val>${open.length}/${all.length}</div><div class="stat-label">Open</div></div>
+    <div class="stat-card"><div class="stat-icon">⏱️</div><div class="stat-val" data-stat-val>${avg} min</div><div class="stat-label">Gemiddeld</div></div>
+    <div class="stat-card"><div class="stat-icon">🔥</div><div class="stat-val" data-stat-val>${max} min</div><div class="stat-label">Langste</div><div class="stat-sub" data-stat-sub>${longest ? longest.name : ""}</div></div>
+  </div>`;
+
+  // Search (preserve focus)
+  html += `<input class="search" id="searchInput" type="text" placeholder="Zoek attractie..." value="${searchQuery}" oninput="onSearch(this.value)">`;
+
+  // Tabs
+  const tabs = [
+    { id:"all", label:"Alles" },
+    { id:"short", label:"≤ 15 min" },
+    { id:"open", label:"Open" },
+    { id:"closed", label:"Gesloten" },
+  ];
+  html += `<div class="tabs">`;
+  for (const t of tabs) {
+    const cls = t.id === activeFilter ? " active" : "";
+    html += `<button class="tab${cls}" onclick="setFilter('${t.id}')">${t.label}<span class="tab-count" data-tab-count="${t.id}">(${counts[t.id]})</span></button>`;
+  }
+  html += `</div>`;
+
+  // View toggle
+  html += `<div class="view-row">
+    <span class="view-label">Weergave</span>
+    <div class="view-toggle">
+      <button class="view-btn${viewMode==="lands"?" active":""}" onclick="setView('lands')">Per gebied</button>
+      <button class="view-btn${viewMode==="flat"?" active":""}" onclick="setView('flat')">Wachttijd</button>
+    </div>
+  </div>`;
+
+  const entering = isFirstRender;
+
+  if (viewMode === "flat") {
+    const flatRides = filterRides(currentData.lands.flatMap(l => l.rides));
+    if (flatRides.length === 0) {
+      html += `<div class="empty">Geen attracties gevonden</div>`;
+    } else {
+      html += `<div class="land-rides" data-rides-container="flat">`;
+      flatRides.forEach(r => { html += rideCardHTML(r, entering); });
+      html += `</div>`;
+    }
+  } else {
+    let anyLand = false;
+    for (const land of currentData.lands) {
+      const rides = filterRides(land.rides);
+      if (rides.length === 0) continue;
+      anyLand = true;
+      const isOpen = collapsedLands[land.id] !== true;
+      const openCount = rides.filter(r => r.is_open).length;
+
+      html += `<div class="land">
+        <button class="land-header" onclick="toggleLand(${land.id})">
+          <span class="land-arrow${isOpen ? " open" : ""}">▶</span>
+          <span class="land-name">${land.name}</span>
+          <span class="land-count" data-land-count="${land.id}">${openCount}/${rides.length}</span>
+        </button>`;
+      if (isOpen) {
+        html += `<div class="land-rides" data-rides-container="${land.id}">`;
+        rides.forEach(r => { html += rideCardHTML(r, entering); });
+        html += `</div>`;
+      }
+      html += `</div>`;
+    }
+    if (!anyLand) html += `<div class="empty">Geen attracties gevonden</div>`;
+  }
+
+  html += `<div class="footer">Data via queue-times.com · Vernieuwt elke 60s</div>`;
+  content.innerHTML = html;
+  isFirstRender = false;
+}
+
+// ─── User interactions ───
+function setFilter(id) { activeFilter = id; render(); }
+function setView(mode) { viewMode = mode; render(); }
+function onSearch(val) { searchQuery = val; render(); }
+function toggleLand(id) {
+  collapsedLands[id] = collapsedLands[id] !== true ? true : false;
+  render();
+}
+
+function updateTimestamp() {
+  const meta = document.getElementById("header-meta");
+  const timeEl = document.getElementById("update-time");
+  meta.style.display = "flex";
+  timeEl.textContent = new Date().toLocaleTimeString("nl-NL", { hour:"2-digit", minute:"2-digit", second:"2-digit" });
+}
+
+// ─── Load data ───
+async function loadData(isInitial) {
+  if (isInitial && !currentData) {
+    document.getElementById("content").innerHTML =
+      `<div class="loading"><div class="loading-icon">✨</div><div class="loading-text">Wachttijden laden...</div></div>`;
+  }
+  try {
+    const newData = await fetchData();
+    const hadData = !!currentData;
+    currentData = newData;
+    updateTimestamp();
+
+    if (!hadData || isInitial) {
+      render(); // full render on first load
+      savePrevStates(); // baseline for status change detection
+    } else {
+      smoothUpdate(); // in-place update on refresh
+    }
+  } catch (e) {
+    if (!currentData) {
+      document.getElementById("content").innerHTML = `
+        <div class="banner banner-error">
+          <div class="banner-icon">⚠️</div>
+          <div class="banner-title">Kon de wachttijden niet laden</div>
+          <div class="banner-sub" style="font-family:'DM Mono',monospace;font-size:12px;margin-top:8px">${e.message || e}</div>
+          <button onclick="loadData(true)" style="margin-top:14px;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.1);border-radius:10px;padding:8px 20px;cursor:pointer;color:var(--text);font-family:'Crimson Pro',serif;font-size:14px">Probeer opnieuw</button>
+        </div>`;
+    }
+  }
+}
+
+async function manualRefresh() {
+  const btn = document.getElementById("refresh-btn");
+  if (btn) btn.classList.add("spinning");
+  await doRefresh();
+  if (btn) btn.classList.remove("spinning");
+}
+
+// ─── Countdown Timer ───
+const REFRESH_INTERVAL = 60; // seconds
+const CIRCUMFERENCE = 2 * Math.PI * 19; // r=19 → ~119.38
+let countdownSeconds = REFRESH_INTERVAL;
+let countdownTimer = null;
+let isRefreshing = false;
+
+const cdEl = document.getElementById("countdown");
+const cdProgress = document.getElementById("countdown-progress");
+const cdText = document.getElementById("countdown-text");
+
+function updateCountdownVisual() {
+  const fraction = countdownSeconds / REFRESH_INTERVAL; // 1 = full, 0 = empty
+  const offset = CIRCUMFERENCE * (1 - fraction);
+  cdProgress.setAttribute("stroke-dashoffset", offset);
+  cdText.textContent = countdownSeconds;
+}
+
+function startCountdown() {
+  countdownSeconds = REFRESH_INTERVAL;
+  // Disable transition during reset to prevent backwards fill animation
+  cdProgress.style.transition = "none";
+  updateCountdownVisual();
+  // Re-enable transition after a frame
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => {
+      cdProgress.style.transition = "";
+    });
+  });
+  clearInterval(countdownTimer);
+  countdownTimer = setInterval(() => {
+    countdownSeconds--;
+    if (countdownSeconds <= 0) {
+      doRefresh();
+    } else {
+      updateCountdownVisual();
+    }
+  }, 1000);
+}
+
+async function doRefresh() {
+  if (isRefreshing) return;
+  isRefreshing = true;
+  clearInterval(countdownTimer);
+
+  // Visual feedback: show refreshing state
+  cdEl.classList.add("refreshing");
+  cdProgress.classList.add("refreshing");
+  cdText.textContent = "↻";
+  cdProgress.style.transition = "none";
+  cdProgress.setAttribute("stroke-dashoffset", "0");
+  requestAnimationFrame(() => { cdProgress.style.transition = ""; });
+
+  await loadData(false);
+
+  // Done — reset
+  isRefreshing = false;
+  cdEl.classList.remove("refreshing");
+  cdProgress.classList.remove("refreshing");
+  startCountdown();
+}
+
+// ─── Boot ───
+(async function boot() {
+  await loadData(true);
+  cdEl.classList.add("visible");
+  startCountdown();
+
+  // Register service worker
+  if ('serviceWorker' in navigator) {
+    try {
+      const reg = await navigator.serviceWorker.register('/sw.js');
+      reg.addEventListener('updatefound', () => {
+        const newSW = reg.installing;
+        newSW.addEventListener('statechange', () => {
+          if (newSW.state === 'activated') {
+            console.log('Efteling PWA updated');
+          }
+        });
+      });
+    } catch (e) {
+      console.log('SW registration failed:', e);
+    }
+  }
+})();
+</script>
+</body>
+</html>
